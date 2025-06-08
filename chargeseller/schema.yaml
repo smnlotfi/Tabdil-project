@@ -1,0 +1,14 @@
+openapi: 3.0.3
+info:
+  title: Techsiro backend APIs
+  version: 1.0.0
+  description: Your API Description
+  contact:
+    name: Your Name
+    url: https://yourwebsite.com
+    email: your.email@example.com
+  license:
+    name: Your License Name
+    url: https://opensource.org/licenses/your-license
+paths: {}
+components: {}

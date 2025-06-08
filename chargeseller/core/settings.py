@@ -37,6 +37,8 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'rest_framework',
+    'drf_spectacular',
     'seller'
 ]
 
@@ -124,3 +126,24 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 
 AUTH_USER_MODEL = 'seller.User'
+
+REST_FRAMEWORK = {
+        'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+    }
+
+SPECTACULAR_SETTINGS = {
+    "COMPONENT_SPLIT_REQUEST": True,
+    "SERVE_INCLUDE_SCHEMA": False,
+    "TITLE": "Techsiro backend APIs",
+    "DESCRIPTION": "Your API Description",
+    "VERSION": "1.0.0",
+    "CONTACT": {
+        "name": "Your Name",
+        "url": "https://yourwebsite.com",
+        "email": "your.email@example.com",
+    },
+    "LICENSE": {
+        "name": "Your License Name",
+        "url": "https://opensource.org/licenses/your-license",
+    },
+}
