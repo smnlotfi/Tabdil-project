@@ -74,7 +74,7 @@ class CreditRequest(AbstractModel):
    )
    status = models.IntegerField(
        choices=STATUS_CHOICES, 
-       default='pending',
+       default=1,
        db_index=True
    )
    description = models.TextField(blank=True)  
@@ -99,3 +99,154 @@ class CreditRequest(AbstractModel):
        
    def __str__(self):
        return f"Credit Request - {self.seller.user.username}: {self.amount} ({self.status})"
+   
+
+class PhoneNumber(AbstractModel):
+    phone_number = models.CharField(
+        max_length=11, 
+        unique=True,
+        db_index=True
+    )
+    is_active = models.BooleanField(default=True, db_index=True)
+
+    class Meta:
+        db_table = 'phone_numbers'
+        indexes = [
+            models.Index(fields=['is_active']),
+        ]
+
+    def __str__(self):
+        return f"{self.phone_number}"
+    
+
+class Transaction(AbstractModel):    
+    TRANSACTION_TYPE_CHOICES = [
+        (1, 'credit_increase'),
+        (2, 'charge_sale'),
+    ]
+    
+    STATUS_CHOICES = [
+        (1, 'pending'),
+        (2, 'completed'),
+        (3, 'failed'),
+        (4, 'cancelled')
+    ]
+
+    seller = models.ForeignKey(
+        Seller,
+        on_delete=models.CASCADE,
+        related_name='transactions'
+    )
+    transaction_type = models.IntegerField(
+        choices=TRANSACTION_TYPE_CHOICES,
+        db_index=True
+    )
+    amount = models.DecimalField(
+        max_digits=15,
+        decimal_places=2,
+        validators=[MinValueValidator(Decimal('0.01'))]
+    )
+    status = models.IntegerField(
+        choices=STATUS_CHOICES,
+        default=1,
+        db_index=True
+    )
+    reference_id = models.CharField(
+        max_length=100,
+        unique=True,
+        db_index=True
+    )
+    description = models.TextField(blank=True)    
+    credit_request = models.ForeignKey(
+        CreditRequest,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='transactions'
+    )    
+    phone_number = models.ForeignKey(
+        PhoneNumber,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='transactions'
+    )
+    charge_amount = models.DecimalField(
+        max_digits=10,
+        decimal_places=0,
+        null=True,
+        blank=True,
+    )
+    balance_before = models.DecimalField(
+        max_digits=15,
+        decimal_places=2,
+    )
+    balance_after = models.DecimalField(
+        max_digits=15,
+        decimal_places=2,
+    )   
+    processed_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        db_table = 'transactions'
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['seller', 'transaction_type']),
+            models.Index(fields=['seller', 'status']),  
+            models.Index(fields=['status', 'created_at']),
+        ]
+
+    def __str__(self):
+        return f"Transaction {self.reference_id} - {self.seller.user.username}: {self.amount}"
+
+class ChargeOrder(AbstractModel):
+    
+    STATUS_CHOICES = [
+        (1, 'pending'),
+        (2, 'processing'),
+        (3, 'completed'),
+        (4, 'failed'),
+        (5, 'cancelled'),
+    ]
+
+    seller = models.ForeignKey(
+        Seller,
+        on_delete=models.CASCADE,
+        related_name='charge_orders'
+    )
+    phone_number = models.ForeignKey(
+        PhoneNumber,
+        on_delete=models.CASCADE,
+        related_name='charge_orders'
+    )
+    charge_amount = models.DecimalField(
+        max_digits=10,
+        decimal_places=0,
+        validators=[MinValueValidator(Decimal('1000'))],
+    )
+    status = models.IntegerField(
+        choices=STATUS_CHOICES,
+        default=1,
+        db_index=True
+    )
+    transaction = models.OneToOneField(
+        Transaction,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='charge_order'
+    )    
+    processed_at = models.DateTimeField(null=True, blank=True)
+    error_message = models.TextField(blank=True)
+    retry_count = models.IntegerField(default=0)
+
+    class Meta:
+        db_table = 'charge_orders'
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['seller', 'status']),
+            models.Index(fields=['status', 'created_at']),
+        ]
+
+    def __str__(self):
+        return f"Order {self.id} - {self.phone_number.phone_number}: {self.charge_amount}"
