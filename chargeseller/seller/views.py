@@ -36,3 +36,15 @@ class CreditRequestViewSet(viewsets.ModelViewSet):
     @transaction.atomic
     def update(self, request, *args, **kwargs):
         return super().update(request, *args, **kwargs)
+    
+
+
+
+#TODO:
+# - Implement all apis with logic
+# - Implement permissions for requests
+# - Implement race conditions for requests
+# - Implement throttling for requests
+# - Implement multiprocessing for requests with reddis
+# - Implement spending double for requests with reddis
+# - Implement tests for requests
