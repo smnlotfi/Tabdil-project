@@ -1,5 +1,4 @@
 from django.db import models
-from django.contrib.auth import get_user_model
 from django.contrib.auth.models import AbstractUser
 from django.core.validators import MinValueValidator
 from decimal import Decimal
@@ -7,7 +6,6 @@ from decimal import Decimal
 
 # Create your models here.
 
-User = get_user_model()
 
 class User(AbstractUser):
     is_seller = models.BooleanField(default=True)
@@ -19,6 +17,7 @@ class User(AbstractUser):
         indexes = [
             models.Index(fields=['is_seller']),
         ]
+
 
 class AbstractModel(models.Model):
 
@@ -34,7 +33,7 @@ class AbstractModel(models.Model):
 
 class Seller(AbstractModel):
     user = models.OneToOneField(
-        'auth.User', 
+        User, 
         on_delete=models.CASCADE,
         related_name='seller'
     )
