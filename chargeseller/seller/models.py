@@ -204,17 +204,10 @@ class Transaction(AbstractModel):
     def get_choice_display(choices, value): return dict(choices).get(value)
 
     @staticmethod
-    def submit_transaction_for_credit_increase(credit_request, user):
-
-        # 1-Calculate balances and seller
-        balance_after = credit_request.seller.balance
-        if credit_request.status == CreditRequest.APPROVEDSTATUS:
-            balance_before = balance_after - credit_request.amount 
-        else:
-            balance_before = balance_after + credit_request.amount
+    def submit_transaction_for_credit_increase(credit_request, user, balance_after, balance_before):
         seller = credit_request.seller
 
-        # 2-Submit Transaction type and status
+        # 1-Submit Transaction type and status
         transaction_type = 1
         if credit_request.status == CreditRequest.APPROVEDSTATUS:
             status = Transaction.COMPLETESTATUS
@@ -223,14 +216,14 @@ class Transaction(AbstractModel):
         else:
             status = Transaction.FAILDSTATUS
 
-        #  3-Set reference_id and amount
+        # 2-Set reference_id and amount
         reference_id = uuid.uuid4()
         amount = credit_request.amount
 
         processed_by = user
         processed_at = datetime.now()
 
-        # 4-Create Transaction
+        # 3-Create Transaction
         new_transaction = Transaction.objects.create(
             balance_before=balance_before,
             balance_after=balance_after,
