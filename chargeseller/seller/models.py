@@ -84,6 +84,15 @@ class CreditRequest(AbstractModel):
    class Meta:
        db_table = 'credit_requests'
        ordering = ['-created_at']
+
+       # Prevent duplicate credit requests within a short time frame
+       constraints = [
+            models.UniqueConstraint(
+                fields=['seller', 'amount'],
+                condition=models.Q(status=1),
+                name='unique_pending_credit_request_per_seller_amount'
+            )
+        ]
        indexes = [
            models.Index(fields=['seller', 'status']),
            models.Index(fields=['status', 'is_processed']),
