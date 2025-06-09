@@ -1,11 +1,11 @@
 from rest_framework import serializers
-from .models import Seller, CreditRequest
+from .models import Seller, CreditRequest, Transaction
 
 
 class SellerSerializer(serializers.ModelSerializer):
     class Meta:
         model = Seller
-        fields = ["id", "user", "balance", "created_at", "updated_at"]
+        fields = ["id", "user", "balance","is_processed", "created_at", "updated_at"]
         read_only_fields = ["created_at", "updated_at"]
 
     def validate_balance(self, value):
@@ -14,8 +14,14 @@ class SellerSerializer(serializers.ModelSerializer):
         return value
 
 
-class CreditRequestSerializer(serializers.ModelSerializer):
+class TransactionSerializer(serializers.ModelSerializer):
 
+    class Meta:
+        model = Transaction
+        fields = '__all__'
+
+class CreditRequestSerializer(serializers.ModelSerializer):
+    transaction = serializers.SerializerMethodField(read_only=True)
     STATUS_MAP = {
         "1": "pending",
         "2": "approved",
@@ -24,8 +30,8 @@ class CreditRequestSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = CreditRequest
-        fields = ["id", "seller", "amount", "status", "created_at", "updated_at"]
-        read_only_fields = ["created_at", "updated_at", "status"]
+        fields = ["id", "seller", "amount", "status","is_processed",  "created_at", "updated_at", "transaction"]
+        read_only_fields = ["created_at", "updated_at", "status", "transaction", "is_processed"]
 
     def validate_amount(self, value):
         if value <= 0:
@@ -43,6 +49,11 @@ class CreditRequestSerializer(serializers.ModelSerializer):
         representation["status"] = self.STATUS_MAP.get(str(status_int), str(status_int))
         return representation
 
+    def get_transaction(self, obj):
+        try:
+            return TransactionSerializer(obj.transactions.all(), many=True).data
+        except Exception:
+            return None
 
 class CreditRequestUpdateStatusSerializer(serializers.ModelSerializer):
     status = serializers.ChoiceField(choices=[2, 3])

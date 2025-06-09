@@ -2,8 +2,8 @@ from django.db import models
 from django.contrib.auth.models import AbstractUser
 from django.core.validators import MinValueValidator
 from decimal import Decimal
-
-
+import uuid
+from datetime import datetime
 # Create your models here.
 
 
@@ -52,7 +52,7 @@ class Seller(AbstractModel):
 
     def __str__(self):
         return f"{self.user.username} - Balance: {self.balance}"
-    
+
 
 class CreditRequest(AbstractModel):
    STATUS_CHOICES = [
@@ -61,6 +61,10 @@ class CreditRequest(AbstractModel):
        (3, 'Rejected'),
    ]
    
+   PENDINGSTATUS = 1
+   APPROVEDSTATUS = 2
+   REJECCTEDSTATUS = 3
+
    seller = models.ForeignKey(
        Seller, 
        on_delete=models.CASCADE, 
@@ -76,17 +80,7 @@ class CreditRequest(AbstractModel):
        default=1,
        db_index=True
    )
-   description = models.TextField(blank=True)  
    is_processed = models.BooleanField(default=False, db_index=True)  
-   processed_at = models.DateTimeField(null=True, blank=True)
-   processed_by = models.ForeignKey(
-       User, 
-       on_delete=models.SET_NULL, 
-       null=True, 
-       blank=True,
-       related_name='processed_credit_requests'
-   )
-
    class Meta:
        db_table = 'credit_requests'
        ordering = ['-created_at']
@@ -98,11 +92,11 @@ class CreditRequest(AbstractModel):
        
    def __str__(self):
        return f"Credit Request - {self.seller.user.username}: {self.amount} ({self.status})"
-   
+
 
 class PhoneNumber(AbstractModel):
     phone_number = models.CharField(
-        max_length=11, 
+        max_length=10, 
         unique=True,
         db_index=True
     )
@@ -116,20 +110,24 @@ class PhoneNumber(AbstractModel):
 
     def __str__(self):
         return f"{self.phone_number}"
-    
+
 
 class Transaction(AbstractModel):    
     TRANSACTION_TYPE_CHOICES = [
-        (1, 'credit_increase'),
-        (2, 'charge_sale'),
+        (1, 'Credit_Increase'),
+        (2, 'Charge_Sale'),
     ]
-    
+
     STATUS_CHOICES = [
-        (1, 'pending'),
-        (2, 'completed'),
-        (3, 'failed'),
-        (4, 'cancelled')
+        (1, 'Pending'),
+        (2, 'Completed'),
+        (3, 'Failed'),
+        (4, 'Canceled')
     ]
+    PENDINGSTATUS = 1
+    COMPLETESTATUS = 2
+    FAILDSTATUS = 3
+    CANCELEDSTATUS = 4
 
     seller = models.ForeignKey(
         Seller,
@@ -184,7 +182,13 @@ class Transaction(AbstractModel):
         decimal_places=2,
     )   
     processed_at = models.DateTimeField(null=True, blank=True)
-
+    processed_by = models.ForeignKey(
+        User, 
+        on_delete=models.SET_NULL, 
+        null=True, 
+        blank=True,
+        related_name='processed_credit_requests'
+    )
     class Meta:
         db_table = 'transactions'
         ordering = ['-created_at']
@@ -196,13 +200,51 @@ class Transaction(AbstractModel):
 
     def __str__(self):
         return f"Transaction {self.reference_id} - {self.seller.user.username}: {self.amount}"
-    
-    
-    def submit_transaction_for_credit_increase(credit_request, amount):
-        # Calculate balances
-        balance_before = credit_request.seller.balance
-        balance_after = balance_before + amount
 
+    def get_choice_display(choices, value): return dict(choices).get(value)
+
+    @staticmethod
+    def submit_transaction_for_credit_increase(credit_request, user):
+
+        # 1-Calculate balances and seller
+        balance_after = credit_request.seller.balance
+        if credit_request.status == CreditRequest.APPROVEDSTATUS:
+            balance_before = balance_after - credit_request.amount 
+        else:
+            balance_before = balance_after + credit_request.amount
+        seller = credit_request.seller
+
+        # 2-Submit Transaction type and status
+        transaction_type = 1
+        if credit_request.status == CreditRequest.APPROVEDSTATUS:
+            status = Transaction.COMPLETESTATUS
+        elif credit_request.status == CreditRequest.REJECCTEDSTATUS:
+            status = Transaction.CANCELEDSTATUS
+        else:
+            status = Transaction.FAILDSTATUS
+
+        #  3-Set reference_id and amount
+        reference_id = uuid.uuid4()
+        amount = credit_request.amount
+
+        processed_by = user
+        processed_at = datetime.now()
+
+        # 4-Create Transaction
+        new_transaction = Transaction.objects.create(
+            balance_before=balance_before,
+            balance_after=balance_after,
+            transaction_type=transaction_type,
+            status=status,
+            reference_id=reference_id,
+            amount=amount,
+            seller=seller,
+            credit_request=credit_request,
+            processed_by=processed_by,
+            processed_at=processed_at
+
+        )
+        return new_transaction
 
 
 class ChargeOrder(AbstractModel):
@@ -242,7 +284,6 @@ class ChargeOrder(AbstractModel):
         blank=True,
         related_name='charge_order'
     )    
-    processed_at = models.DateTimeField(null=True, blank=True)
     error_message = models.TextField(blank=True)
     retry_count = models.IntegerField(default=0)
 
