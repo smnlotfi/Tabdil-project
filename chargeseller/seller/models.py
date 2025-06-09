@@ -155,7 +155,6 @@ class Transaction(AbstractModel):
         unique=True,
         db_index=True
     )
-    description = models.TextField(blank=True)    
     credit_request = models.ForeignKey(
         CreditRequest,
         on_delete=models.SET_NULL,
@@ -197,6 +196,14 @@ class Transaction(AbstractModel):
 
     def __str__(self):
         return f"Transaction {self.reference_id} - {self.seller.user.username}: {self.amount}"
+    
+    
+    def submit_transaction_for_credit_increase(credit_request, amount):
+        # Calculate balances
+        balance_before = credit_request.seller.balance
+        balance_after = balance_before + amount
+
+
 
 class ChargeOrder(AbstractModel):
     
