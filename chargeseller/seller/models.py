@@ -94,7 +94,7 @@ class CreditRequest(AbstractModel):
 
 
 class PhoneNumber(AbstractModel):
-    phone_number = models.CharField(max_length=10, unique=True, db_index=True)
+    phone_number = models.CharField(max_length=11, unique=True, db_index=True)
     is_active = models.BooleanField(default=True, db_index=True)
 
     class Meta:
@@ -107,6 +107,36 @@ class PhoneNumber(AbstractModel):
         return f"{self.phone_number}"
 
 
+
+class ChargeOrder(AbstractModel):
+
+    seller = models.ForeignKey(
+        Seller, on_delete=models.CASCADE, related_name="charge_orders"
+    )
+    phone_number = models.ForeignKey(
+        PhoneNumber, on_delete=models.CASCADE, related_name="charge_orders"
+    )
+    amount = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        validators=[MinValueValidator(Decimal("1000"))],
+    )
+    error_message = models.TextField(blank=True)
+    retry_count = models.IntegerField(default=0)
+
+    class Meta:
+        db_table = "charge_orders"
+        ordering = ["-created_at"]
+        indexes = [
+            models.Index(fields=["seller"]),
+            models.Index(fields=["created_at"]),
+        ]
+
+    def __str__(self):
+        return (
+            f"Order {self.id} - {self.phone_number.phone_number}: {self.charge_amount}"
+        )
+    
 class Transaction(AbstractModel):
     TRANSACTION_TYPE_CHOICES = [
         (1, "Credit_Increase"),
@@ -150,6 +180,7 @@ class Transaction(AbstractModel):
         null=True,
         blank=True,
     )
+    charge_order = models.OneToOneField(ChargeOrder, on_delete=models.SET_NULL, null=True, blank=True, related_name='transaction')
     balance_before = models.DecimalField(
         max_digits=15,
         decimal_places=2,
@@ -219,48 +250,3 @@ class Transaction(AbstractModel):
         )
         return new_transaction
 
-
-class ChargeOrder(AbstractModel):
-
-    STATUS_CHOICES = [
-        (1, "pending"),
-        (2, "processing"),
-        (3, "completed"),
-        (4, "failed"),
-        (5, "cancelled"),
-    ]
-
-    seller = models.ForeignKey(
-        Seller, on_delete=models.CASCADE, related_name="charge_orders"
-    )
-    phone_number = models.ForeignKey(
-        PhoneNumber, on_delete=models.CASCADE, related_name="charge_orders"
-    )
-    charge_amount = models.DecimalField(
-        max_digits=10,
-        decimal_places=0,
-        validators=[MinValueValidator(Decimal("1000"))],
-    )
-    status = models.IntegerField(choices=STATUS_CHOICES, default=1, db_index=True)
-    transaction = models.OneToOneField(
-        Transaction,
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name="charge_order",
-    )
-    error_message = models.TextField(blank=True)
-    retry_count = models.IntegerField(default=0)
-
-    class Meta:
-        db_table = "charge_orders"
-        ordering = ["-created_at"]
-        indexes = [
-            models.Index(fields=["seller", "status"]),
-            models.Index(fields=["status", "created_at"]),
-        ]
-
-    def __str__(self):
-        return (
-            f"Order {self.id} - {self.phone_number.phone_number}: {self.charge_amount}"
-        )

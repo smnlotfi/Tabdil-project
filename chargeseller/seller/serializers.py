@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Seller, CreditRequest, Transaction
+from .models import Seller, CreditRequest, Transaction, PhoneNumber
 
 
 class SellerSerializer(serializers.ModelSerializer):
@@ -85,3 +85,10 @@ class CreditRequestUpdateStatusSerializer(serializers.ModelSerializer):
         status_int = instance.status
         representation["status"] = self.STATUS_MAP.get(str(status_int), str(status_int))
         return representation
+
+
+class PhoneNumberSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = PhoneNumber
+        fields = ['id', 'phone_number', 'is_active']

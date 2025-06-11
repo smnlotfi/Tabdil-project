@@ -1,10 +1,11 @@
 from django.shortcuts import render
 from rest_framework import viewsets
-from .models import Seller, CreditRequest, Transaction
+from .models import Seller, CreditRequest, Transaction, PhoneNumber
 from .serializers import (
     SellerSerializer,
     CreditRequestSerializer,
     CreditRequestUpdateStatusSerializer,
+    PhoneNumberSerializer
 )
 from django.db import transaction
 from rest_framework.response import Response
@@ -14,18 +15,13 @@ from rest_framework.permissions import IsAdminUser
 from core.permission import IsSellerUser
 from django.db.models import F
 
-# Create your views here.
-
 
 class SellerViewSet(viewsets.ModelViewSet):
-    """
-    A viewset for viewing and editing seller instances.
-    """
 
-    permission_classes = [IsAdminUser]
 
     queryset = Seller.objects.all()
     serializer_class = SellerSerializer
+    permission_classes = [IsAdminUser]
 
     @transaction.atomic
     def create(self, request, *args, **kwargs):
@@ -37,14 +33,10 @@ class SellerViewSet(viewsets.ModelViewSet):
 
 
 class CreditRequestViewSet(viewsets.ModelViewSet):
-    """
-    A viewset for viewing and editing credit request instances.
-    """
-
-    permission_classes = [IsSellerUser]
 
     queryset = CreditRequest.objects.select_for_update().select_related("seller")
     serializer_class = CreditRequestSerializer
+    permission_classes = [IsSellerUser]
 
     @transaction.atomic
     def create(self, request, *args, **kwargs):
@@ -122,6 +114,12 @@ class CreditRequestViewSet(viewsets.ModelViewSet):
         data = CreditRequestSerializer(credit_request).data
         return Response(data, status=status.HTTP_200_OK)
 
+
+
+class PhoneNumberViewset(viewsets.ModelViewSet):
+    queryset = PhoneNumber.objects.all()
+    serializer_class = PhoneNumberSerializer
+    permission_classes = [IsSellerUser]
 
 # TODO:
 # - Implement all apis with logic

@@ -7,6 +7,7 @@ router = DefaultRouter()
 
 router.register(r'sellers', SellerViewSet, basename='seller')
 router.register(r'credit-requests', CreditRequestViewSet, basename='credit-request')
+router.register(r'phone-number', PhoneNumberViewset, basename='phone-number')
 
 
 urlpatterns = [
