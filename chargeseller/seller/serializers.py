@@ -95,11 +95,12 @@ class PhoneNumberSerializer(serializers.ModelSerializer):
 
 
 class ChargeOrderSerializer(serializers.ModelSerializer):
+    transaction = TransactionSerializer(read_only=True)
 
     class Meta:
         model = ChargeOrder
-        fields = ['id', 'seller', 'phone_number', 'amount', 'error_message', 'retry_count']
-        read_only_fields = ['id', 'error_message', 'retry_count']
+        fields = ['id', 'seller', 'phone_number', 'amount', 'error_message', 'retry_count','transaction']
+        read_only_fields = ['id', 'error_message', 'retry_count', 'transaction']
 
     def validate_amount(self, value):
 
@@ -110,7 +111,18 @@ class ChargeOrderSerializer(serializers.ModelSerializer):
     def validate(self, attrs):
         seller = attrs.get('seller')
         amount = attrs.get('amount')
-        
+
+        try:
+            seller_obj = Seller.objects.select_for_update().get(id=seller.id)
+        except Seller.DoesNotExist:
+            raise serializers.ValidationError({
+                'seller': 'Seller with this ID does not exist'
+            })
+        except AttributeError:
+            raise serializers.ValidationError({
+                'seller': 'Seller field is required'
+            })
+    
         # Check Seller Balance
         if seller and amount:
             seller_obj = Seller.objects.select_for_update().get(id=seller.id)

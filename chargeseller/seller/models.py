@@ -121,7 +121,6 @@ class ChargeOrder(AbstractModel):
     amount = models.DecimalField(
         max_digits=10,
         decimal_places=2,
-        validators=[MinValueValidator(Decimal("1000"))],
     )
     error_message = models.TextField(blank=True)
     retry_count = models.IntegerField(default=0)
@@ -140,13 +139,14 @@ class ChargeOrder(AbstractModel):
         )
     
     @classmethod
-    def get_recent_order(cls, seller, phone_number):
+    def get_recent_order(cls, seller_id, phone_number, amount):
 
         ten_minutes_ago = timezone.now() - timedelta(minutes=10)
         
         return cls.objects.filter(
-            seller=seller,
+            seller_id=seller_id,
             phone_number=phone_number,
+            amount=amount,
             created_at__gte=ten_minutes_ago
         ).first()
     
@@ -263,3 +263,34 @@ class Transaction(AbstractModel):
         )
         return new_transaction
 
+    @staticmethod
+    def submit_transaction_for_charge_order(
+        charge_order, seller, user, balance_after, balance_before
+    ):
+
+        # 1-Submit Transaction type and status
+        transaction_type = 2
+        status = Transaction.COMPLETESTATUS
+
+
+        # 2-Set reference_id and amount
+        reference_id = uuid.uuid4()
+        amount = charge_order.amount
+
+        processed_by = user
+        processed_at = datetime.now()
+
+        # 3-Create Transaction
+        new_transaction = Transaction.objects.create(
+            balance_before=balance_before,
+            balance_after=balance_after,
+            transaction_type=transaction_type,
+            status=status,
+            reference_id=reference_id,
+            amount=amount,
+            seller=seller,
+            charge_order=charge_order,
+            processed_by=processed_by,
+            processed_at=processed_at,
+        )
+        return new_transaction
