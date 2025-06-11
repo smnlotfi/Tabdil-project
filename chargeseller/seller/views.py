@@ -1,11 +1,13 @@
 from django.shortcuts import render
 from rest_framework import viewsets
-from .models import Seller, CreditRequest, Transaction, PhoneNumber
+from rest_framework.views import APIView
+from .models import Seller, CreditRequest, Transaction, PhoneNumber, ChargeOrder
 from .serializers import (
     SellerSerializer,
     CreditRequestSerializer,
     CreditRequestUpdateStatusSerializer,
-    PhoneNumberSerializer
+    PhoneNumberSerializer,
+    ChargeOrderSerializer,
 )
 from django.db import transaction
 from rest_framework.response import Response
@@ -14,10 +16,13 @@ from rest_framework.decorators import action
 from rest_framework.permissions import IsAdminUser
 from core.permission import IsSellerUser
 from django.db.models import F
+import logging
+
+logger = logging.getLogger(__name__)
+
 
 
 class SellerViewSet(viewsets.ModelViewSet):
-
 
     queryset = Seller.objects.all()
     serializer_class = SellerSerializer
@@ -115,11 +120,58 @@ class CreditRequestViewSet(viewsets.ModelViewSet):
         return Response(data, status=status.HTTP_200_OK)
 
 
-
 class PhoneNumberViewset(viewsets.ModelViewSet):
+
     queryset = PhoneNumber.objects.all()
     serializer_class = PhoneNumberSerializer
     permission_classes = [IsSellerUser]
+
+
+class ChargeOrderCreateView(APIView):
+    permission_classes = [IsSellerUser]
+
+    @transaction.atomic
+    def post(self, request):
+        try:
+            serializer = ChargeOrderSerializer(data=request.data)
+            serializer.is_valid(raise_exception=True)
+
+            seller = serializer.validated_data["seller"]
+            phone_number = serializer.validated_data["phone_number"]
+            amount = serializer.validated_data["amount"]
+
+            # 1-Check For Recent Duplicate Request
+            recent_order = ChargeOrder.get_recent_order(seller, phone_number)
+
+            # 2-Increment Retry Count
+            if recent_order:
+                recent_order.retry_count += 1
+                recent_order.error_message = f"Duplicate request attempt. Retry count: {recent_order.retry_count}"
+                recent_order.save(
+                    update_fields=["retry_count", "error_message", "updated_at"]
+                )
+
+                return Response(
+                    {
+                        "error": "Duplicate request found within 10 minutes",
+                        "recent_order_id": recent_order.id,
+                        "retry_count": recent_order.retry_count,
+                    },
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            # 3-Create New Charge Order
+            charge_order = serializer.save()
+
+            logger.info(f"Charge order created successfully: {charge_order.id}")
+
+            return Response(
+                ChargeOrderSerializer(charge_order).data, status=status.HTTP_201_CREATED
+            )
+
+        except Exception as e:
+            logger.error(f"Error creating charge order: {str(e)}")
+
 
 # TODO:
 # - Implement all apis with logic

@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Seller, CreditRequest, Transaction, PhoneNumber
+from .models import Seller, CreditRequest, Transaction, PhoneNumber, ChargeOrder
 
 
 class SellerSerializer(serializers.ModelSerializer):
@@ -92,3 +92,29 @@ class PhoneNumberSerializer(serializers.ModelSerializer):
     class Meta:
         model = PhoneNumber
         fields = ['id', 'phone_number', 'is_active']
+
+
+class ChargeOrderSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = ChargeOrder
+        fields = ['id', 'seller', 'phone_number', 'amount', 'error_message', 'retry_count']
+        read_only_fields = ['id', 'error_message', 'retry_count']
+
+    def validate_amount(self, value):
+
+        if value <= 0:
+            raise serializers.ValidationError("Amount cannot be negative or zero")
+        return value
+
+    def validate(self, attrs):
+        seller = attrs.get('seller')
+        amount = attrs.get('amount')
+        
+        # Check Seller Balance
+        if seller and amount:
+            seller_obj = Seller.objects.select_for_update().get(id=seller.id)
+            if seller_obj.balance < amount:
+                raise serializers.ValidationError("Insufficient seller balance")
+        
+        return attrs

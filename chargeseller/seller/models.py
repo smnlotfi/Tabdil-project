@@ -4,6 +4,8 @@ from django.core.validators import MinValueValidator
 from decimal import Decimal
 import uuid
 from datetime import datetime
+from django.utils import timezone
+from datetime import timedelta
 
 
 
@@ -134,8 +136,19 @@ class ChargeOrder(AbstractModel):
 
     def __str__(self):
         return (
-            f"Order {self.id} - {self.phone_number.phone_number}: {self.charge_amount}"
+            f"Order {self.id} - {self.phone_number.phone_number}: {self.amount}"
         )
+    
+    @classmethod
+    def get_recent_order(cls, seller, phone_number):
+
+        ten_minutes_ago = timezone.now() - timedelta(minutes=10)
+        
+        return cls.objects.filter(
+            seller=seller,
+            phone_number=phone_number,
+            created_at__gte=ten_minutes_ago
+        ).first()
     
 class Transaction(AbstractModel):
     TRANSACTION_TYPE_CHOICES = [

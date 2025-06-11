@@ -12,4 +12,6 @@ router.register(r'phone-number', PhoneNumberViewset, basename='phone-number')
 
 urlpatterns = [
     path('', include(router.urls)),
+    path('charge-orders/', ChargeOrderCreateView.as_view(), name='charge-order-create'),
+
 ]
