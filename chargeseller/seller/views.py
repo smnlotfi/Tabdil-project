@@ -8,7 +8,7 @@ from .serializers import (
     CreditRequestUpdateStatusSerializer,
     PhoneNumberSerializer,
     ChargeOrderSerializer,
-    TransactionSerializer
+    TransactionSerializer,
 )
 from django.db import transaction
 from rest_framework.response import Response
@@ -22,7 +22,6 @@ from drf_spectacular.utils import extend_schema
 
 
 logger = logging.getLogger(__name__)
-
 
 
 class SellerViewSet(viewsets.ModelViewSet):
@@ -130,7 +129,6 @@ class PhoneNumberViewset(viewsets.ModelViewSet):
     permission_classes = [IsSellerUser]
 
 
-
 class ChargeOrderCreateView(APIView):
     permission_classes = [IsSellerUser]
 
@@ -140,10 +138,7 @@ class ChargeOrderCreateView(APIView):
         try:
             serializer = ChargeOrderSerializer(data=request.data)
             if not serializer.is_valid():
-                return Response(
-                    serializer.errors, 
-                    status=status.HTTP_400_BAD_REQUEST
-                )
+                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
             seller_id = serializer.validated_data["seller"].id
             phone_number = serializer.validated_data["phone_number"]
             amount = serializer.validated_data["amount"]
@@ -175,14 +170,13 @@ class ChargeOrderCreateView(APIView):
                 seller = Seller.objects.select_for_update().get(id=seller_id)
                 balance_before = seller.balance
                 seller.balance = F("balance") - amount
-                seller.save(update_fields=['balance'])
+                seller.save(update_fields=["balance"])
                 seller.refresh_from_db()
                 balance_after = seller.balance
-                
+
             except Seller.DoesNotExist:
                 return Response(
-                    {"error": "Seller not found"}, 
-                    status=status.HTTP_404_NOT_FOUND
+                    {"error": "Seller not found"}, status=status.HTTP_404_NOT_FOUND
                 )
             Transaction.submit_transaction_for_charge_order(
                 charge_order=charge_order,
@@ -204,34 +198,31 @@ class ChargeOrderCreateView(APIView):
 
 class ChargeOrderListView(APIView):
     permission_classes = [IsSellerUser]
-    
+
     def get(self, request):
-        queryset = ChargeOrder.objects.select_related(
-            'seller', 'phone_number'
-        ).filter(
+        queryset = ChargeOrder.objects.select_related("seller", "phone_number").filter(
             seller=request.user.seller
         )
-        
+
         serializer = ChargeOrderSerializer(queryset, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
-    
 
-class TransactionReadOnlyViewSet(mixins.ListModelMixin,
-                                mixins.RetrieveModelMixin,
-                                viewsets.GenericViewSet):
+
+class TransactionReadOnlyViewSet(
+    mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.GenericViewSet
+):
 
     queryset = Transaction.objects.select_related(
-        'seller', 'phone_number', 'credit_request', 'charge_order'
+        "seller", "phone_number", "credit_request", "charge_order"
     ).all()
     serializer_class = TransactionSerializer
 
     def get_queryset(self):
         queryset = super().get_queryset()
-        transaction_type = self.request.query_params.get('type', None)
-        seller = self.request.query_params.get('seller', None)
-        phone_number = self.request.query_params.get('phone_number', None)
+        transaction_type = self.request.query_params.get("type", None)
+        seller = self.request.query_params.get("seller", None)
+        phone_number = self.request.query_params.get("phone_number", None)
 
-        
         if transaction_type:
             queryset = queryset.filter(transaction_type=transaction_type)
 
@@ -240,18 +231,22 @@ class TransactionReadOnlyViewSet(mixins.ListModelMixin,
 
         if phone_number:
             queryset = queryset.filter(phone_number=phone_number)
-            
+
         return queryset
 
-    @action(detail=False, methods=['get'])
+    @action(detail=False, methods=["get"])
     def summary(self, request):
         from django.db.models import Count, Sum
-        
-        summary = self.get_queryset().values('transaction_type').annotate(
-            count=Count('id'),
-            total_amount=Sum('amount')  # Assuming you have an amount field
+
+        summary = (
+            self.get_queryset()
+            .values("transaction_type")
+            .annotate(
+                count=Count("id"),
+                total_amount=Sum("amount"),  # Assuming you have an amount field
+            )
         )
-        
+
         return Response(summary)
 
 

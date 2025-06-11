@@ -91,7 +91,7 @@ class PhoneNumberSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = PhoneNumber
-        fields = ['id', 'phone_number', 'is_active']
+        fields = ["id", "phone_number", "is_active"]
 
 
 class ChargeOrderSerializer(serializers.ModelSerializer):
@@ -99,8 +99,16 @@ class ChargeOrderSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = ChargeOrder
-        fields = ['id', 'seller', 'phone_number', 'amount', 'error_message', 'retry_count','transaction']
-        read_only_fields = ['id', 'error_message', 'retry_count', 'transaction']
+        fields = [
+            "id",
+            "seller",
+            "phone_number",
+            "amount",
+            "error_message",
+            "retry_count",
+            "transaction",
+        ]
+        read_only_fields = ["id", "error_message", "retry_count", "transaction"]
 
     def validate_amount(self, value):
 
@@ -109,24 +117,22 @@ class ChargeOrderSerializer(serializers.ModelSerializer):
         return value
 
     def validate(self, attrs):
-        seller = attrs.get('seller')
-        amount = attrs.get('amount')
+        seller = attrs.get("seller")
+        amount = attrs.get("amount")
 
         try:
             seller_obj = Seller.objects.select_for_update().get(id=seller.id)
         except Seller.DoesNotExist:
-            raise serializers.ValidationError({
-                'seller': 'Seller with this ID does not exist'
-            })
+            raise serializers.ValidationError(
+                {"seller": "Seller with this ID does not exist"}
+            )
         except AttributeError:
-            raise serializers.ValidationError({
-                'seller': 'Seller field is required'
-            })
-    
+            raise serializers.ValidationError({"seller": "Seller field is required"})
+
         # Check Seller Balance
         if seller and amount:
             seller_obj = Seller.objects.select_for_update().get(id=seller.id)
             if seller_obj.balance < amount:
                 raise serializers.ValidationError("Insufficient seller balance")
-        
+
         return attrs

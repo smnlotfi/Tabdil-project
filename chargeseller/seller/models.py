@@ -8,7 +8,6 @@ from django.utils import timezone
 from datetime import timedelta
 
 
-
 class User(AbstractUser):
     is_seller = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -109,7 +108,6 @@ class PhoneNumber(AbstractModel):
         return f"{self.phone_number}"
 
 
-
 class ChargeOrder(AbstractModel):
 
     seller = models.ForeignKey(
@@ -134,22 +132,21 @@ class ChargeOrder(AbstractModel):
         ]
 
     def __str__(self):
-        return (
-            f"Order {self.id} - {self.phone_number.phone_number}: {self.amount}"
-        )
-    
+        return f"Order {self.id} - {self.phone_number.phone_number}: {self.amount}"
+
     @classmethod
     def get_recent_order(cls, seller_id, phone_number, amount):
 
         ten_minutes_ago = timezone.now() - timedelta(minutes=10)
-        
+
         return cls.objects.filter(
             seller_id=seller_id,
             phone_number=phone_number,
             amount=amount,
-            created_at__gte=ten_minutes_ago
+            created_at__gte=ten_minutes_ago,
         ).first()
-    
+
+
 class Transaction(AbstractModel):
     TRANSACTION_TYPE_CHOICES = [
         (1, "Credit_Increase"),
@@ -193,7 +190,13 @@ class Transaction(AbstractModel):
         null=True,
         blank=True,
     )
-    charge_order = models.OneToOneField(ChargeOrder, on_delete=models.SET_NULL, null=True, blank=True, related_name='transaction')
+    charge_order = models.OneToOneField(
+        ChargeOrder,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="transaction",
+    )
     balance_before = models.DecimalField(
         max_digits=15,
         decimal_places=2,
@@ -271,7 +274,6 @@ class Transaction(AbstractModel):
         # 1-Submit Transaction type and status
         transaction_type = 2
         status = Transaction.COMPLETESTATUS
-
 
         # 2-Set reference_id and amount
         reference_id = uuid.uuid4()
