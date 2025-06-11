@@ -83,9 +83,7 @@ class CreditRequestViewSet(viewsets.ModelViewSet):
             balance_before = credit_request.seller.balance
 
             if request.data["status"] == CreditRequest.REJECCTEDSTATUS:
-                Seller.objects.filter(id=credit_request.seller.id).update(
-                    balance=F("balance") - credit_request.amount
-                )
+                pass
             elif request.data["status"] == CreditRequest.APPROVEDSTATUS:
                 Seller.objects.filter(id=credit_request.seller.id).update(
                     balance=F("balance") + credit_request.amount

@@ -76,7 +76,6 @@ class CreditRequest(AbstractModel):
         db_table = "credit_requests"
         ordering = ["-created_at"]
 
-        # Prevent duplicate credit requests within a short time frame
         constraints = [
             models.UniqueConstraint(
                 fields=["seller", "amount"],
