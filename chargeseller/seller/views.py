@@ -83,18 +83,28 @@ class CreditRequestViewSet(viewsets.ModelViewSet):
 
             balance_before = credit_request.seller.balance
 
-            if request.data["status"] != credit_request.status:
-                if (
-                    request.data["status"] == CreditRequest.REJECCTEDSTATUS
-                    and credit_request.status == CreditRequest.APPROVEDSTATUS
-                ):
-                    Seller.objects.filter(id=credit_request.seller.id).update(
-                        balance=F("balance") - credit_request.amount
-                    )
-                elif request.data["status"] == CreditRequest.APPROVEDSTATUS:
-                    Seller.objects.filter(id=credit_request.seller.id).update(
-                        balance=F("balance") + credit_request.amount
-                    )
+            if request.data["status"] == CreditRequest.REJECCTEDSTATUS:
+                Seller.objects.filter(id=credit_request.seller.id).update(
+                    balance=F("balance") - credit_request.amount
+                )
+            elif request.data["status"] == CreditRequest.APPROVEDSTATUS:
+                Seller.objects.filter(id=credit_request.seller.id).update(
+                    balance=F("balance") + credit_request.amount
+                )
+
+            # If you Want Update Status Api Should Be Editable Use This Code
+            # if request.data["status"] != credit_request.status:
+            #     if (
+            #         request.data["status"] == CreditRequest.REJECCTEDSTATUS
+            #         and credit_request.status == CreditRequest.APPROVEDSTATUS
+            #     ):
+            #         Seller.objects.filter(id=credit_request.seller.id).update(
+            #             balance=F("balance") - credit_request.amount
+            #         )
+            #     elif request.data["status"] == CreditRequest.APPROVEDSTATUS:
+            #         Seller.objects.filter(id=credit_request.seller.id).update(
+            #             balance=F("balance") + credit_request.amount
+            #         )
 
             credit_request.seller.refresh_from_db()
             balance_after = credit_request.seller.balance
@@ -117,7 +127,6 @@ class CreditRequestViewSet(viewsets.ModelViewSet):
 # - Implement all apis with logic
 # - Implement permissions for requests
 # - Implement race conditions for requests
-# - Implement throttling for requests
-# - Implement multiprocessing for requests with reddis
 # - Implement spending double for requests with reddis
+# - Implement multiprocessing for requests with reddis
 # - Implement tests for requests

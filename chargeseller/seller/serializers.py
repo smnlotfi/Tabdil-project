@@ -5,7 +5,7 @@ from .models import Seller, CreditRequest, Transaction
 class SellerSerializer(serializers.ModelSerializer):
     class Meta:
         model = Seller
-        fields = ["id", "user", "balance", "is_processed", "created_at", "updated_at"]
+        fields = ["id", "user", "balance", "created_at", "updated_at"]
         read_only_fields = ["created_at", "updated_at"]
 
     def validate_balance(self, value):

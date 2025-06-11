@@ -5,7 +5,6 @@ from decimal import Decimal
 import uuid
 from datetime import datetime
 
-# Create your models here.
 
 
 class User(AbstractUser):
